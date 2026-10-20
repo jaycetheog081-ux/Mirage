@@ -18,47 +18,44 @@ concurrency:
 
 jobs:
   build:
-    name: Build iOS App
+    name: Build Mirage
     runs-on: macos-15
 
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
+      - name: Install XcodeGen
+        run: |
+          set -euo pipefail
+          brew install xcodegen
+          xcodegen --version
+
       - name: Select Xcode
         run: |
           set -euo pipefail
 
-          XCODE_PATH="$(find /Applications -maxdepth 1 -type d -name 'Xcode*.app' | sort -V | tail -n 1)"
-
-          if [ -z "$XCODE_PATH" ]; then
-            echo "::error::No Xcode installation was found."
-            exit 1
-          fi
-
-          sudo xcode-select -s "$XCODE_PATH/Contents/Developer"
-
           xcodebuild -version
-          xcodegen --version
+          xcode-select -p
 
-      - name: Validate Project Configuration
+      - name: Validate Project Files
         run: |
           set -euo pipefail
 
-          if [ ! -f project.yml ]; then
-            echo "::error::project.yml was not found in the repository root."
+          test -f project.yml || {
+            echo "::error::project.yml is missing."
             exit 1
-          fi
+          }
 
-          if [ ! -d MirageApp ]; then
-            echo "::error::MirageApp directory was not found."
+          test -d MirageApp || {
+            echo "::error::MirageApp directory is missing."
             exit 1
-          fi
+          }
 
-          if [ ! -d MirageCore ]; then
-            echo "::error::MirageCore directory was not found."
+          test -d MirageCore || {
+            echo "::error::MirageCore directory is missing."
             exit 1
-          fi
+          }
 
       - name: Generate Xcode Project
         run: |
@@ -66,10 +63,9 @@ jobs:
 
           xcodegen generate --spec project.yml
 
-          if [ ! -d Mirage.xcodeproj ]; then
-            echo "::error::XcodeGen did not create Mirage.xcodeproj."
-            exit 1
-          fi
+          xcodebuild \
+            -list \
+            -project Mirage.xcodeproj
 
       - name: Build iOS Simulator App
         run: |
@@ -85,7 +81,7 @@ jobs:
             CODE_SIGNING_ALLOWED=NO \
             build
 
-      - name: Build Device App
+      - name: Build iOS Device App
         run: |
           set -euo pipefail
 
@@ -106,19 +102,21 @@ jobs:
           APP_PATH="$RUNNER_TEMP/MirageDeviceBuild/Build/Products/Release-iphoneos/Mirage.app"
 
           if [ ! -d "$APP_PATH" ]; then
-            echo "::error::Mirage.app was not produced by the device build."
+            echo "::error::Mirage.app was not produced."
             exit 1
           fi
 
           mkdir -p Payload
           cp -R "$APP_PATH" Payload/Mirage.app
+
           /usr/bin/zip -qry Mirage-unsigned.ipa Payload
+
           rm -rf Payload
 
       - name: Upload Build Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: Mirage-iOS-Build
+          name: Mirage-Build
           if-no-files-found: error
           path: |
             Mirage-unsigned.ipa
