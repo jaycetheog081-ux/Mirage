@@ -1,0 +1,35 @@
+name: Mirage
+
+options:
+  bundleIdPrefix: org.mirage
+  deploymentTarget:
+    iOS: "16.0"
+  createIntermediateGroups: true
+
+settings:
+  base:
+    PRODUCT_NAME: Mirage
+    TARGETED_DEVICE_FAMILY: "1,2"
+    IPHONEOS_DEPLOYMENT_TARGET: "16.0"
+    CLANG_C_LANGUAGE_STANDARD: gnu11
+    CLANG_ENABLE_MODULES: YES
+
+targets:
+  Mirage:
+    type: application
+    platform: iOS
+
+    sources:
+      - path: MirageApp
+      - path: MirageCore
+
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: org.mirage.emulator
+        INFOPLIST_FILE: MirageApp/Info.plist
+        GENERATE_INFOPLIST_FILE: NO
+        CODE_SIGN_STYLE: Automatic
+        SWIFT_VERSION: ""
+
+    info:
+      path: MirageApp/Info.plist
